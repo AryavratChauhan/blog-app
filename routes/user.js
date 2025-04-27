@@ -40,7 +40,15 @@ router.post("/signup", async (req, res) => {
     email,
     password,
   });
-  return res.redirect("/");
+  try {
+    const token = await User.matchPasswordAndGenerateToken(email, password);
+
+    return res.cookie("token", token).redirect("/");
+  } catch (error) {
+    return res.render("signin", {
+      error: "Something went wrong. Please try again",
+    });
+  }
 });
 
 module.exports = router;
