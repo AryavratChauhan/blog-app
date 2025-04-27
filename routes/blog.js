@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 
 const Blog = require("../models/blog");
 const Comment = require("../models/comment");
@@ -9,7 +10,12 @@ const router = Router();
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.resolve(`./public/uploads/`));
+    // Create uploads directory if it doesn't exist
+    const uploadDir = path.resolve("./uploads");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const fileName = `${Date.now()}-${file.originalname}`;
@@ -18,6 +24,12 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+
+// Route to serve uploaded files
+router.get("/uploads/:filename", (req, res) => {
+  const filePath = path.resolve("./uploads", req.params.filename);
+  res.sendFile(filePath);
+});
 
 router.get("/add-new", (req, res) => {
   if (!req.user) return res.redirect("/user/signin");
@@ -54,7 +66,7 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
     body,
     title,
     createdBy: req.user._id,
-    coverImageURL: `/uploads/${req.file?.filename ?? "default.jpg"}`,
+    coverImageURL: `/blog/uploads/${req.file?.filename ?? "default.jpg"}`,
   });
   return res.redirect(`/blog/${blog._id}`);
 });
